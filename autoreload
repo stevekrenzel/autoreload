@@ -43,16 +43,23 @@ process = subprocess.Popen(command, shell=True)
 # The current maximum file modified time under the watched directory
 last_mtime = max(chain(file_times(path), top_level_file_times(path)))
 
+def kill_process_tree(p):
+    parent = psutil.Process(p.pid)
+    for child in parent.children(recursive=True):  # or parent.children() for recursive=False
+        child.kill()
+    p.kill()
 
-while True:
-    max_mtime = max(chain(file_times(path), top_level_file_times(path)))
-    print_stdout(process)
-    if max_mtime > last_mtime:
-        last_mtime = max_mtime
-        print 'Restarting process.'
-	    parent = psutil.Process(process.pid)
-	    for child in parent.children(recursive=True):  # or parent.children() for recursive=False
-            child.kill()
-        process.kill()
-        process = subprocess.Popen(command, shell=True)
-    time.sleep(wait)
+try:
+    while True:
+        max_mtime = max(chain(file_times(path), top_level_file_times(path)))
+        print_stdout(process)
+        if max_mtime > last_mtime:
+            last_mtime = max_mtime
+            print 'Restarting process.'
+            kill_process_tree(process)
+            process = subprocess.Popen(command, shell=True)
+        time.sleep(wait)
+except KeyboardInterrupt:
+    print('Interrupted')
+    kill_process_tree(process)
+    exit()
