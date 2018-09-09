@@ -4,6 +4,7 @@ import sys
 import subprocess
 import time
 import psutil
+from itertools import chain
 
 def file_filter(name):
     return (not name.startswith(".")) and (not name.endswith(".swp"))
@@ -15,6 +16,11 @@ def file_times(path):
             for file in filter(file_filter, files):
                 yield os.stat(os.path.join(root, file)).st_mtime
 
+
+def top_level_file_times(path):
+    for file in filter(file_filter, os.listdir(path)):
+        if os.path.isfile(file):
+            yield os.stat(os.path.join(path, file)).st_mtime
 
 def print_stdout(process):
     stdout = process.stdout
@@ -35,11 +41,11 @@ wait = 1
 process = subprocess.Popen(command, shell=True)
 
 # The current maximum file modified time under the watched directory
-last_mtime = max(file_times(path))
+last_mtime = max(chain(file_times(path), top_level_file_times(path)))
 
 
 while True:
-    max_mtime = max(file_times(path))
+    max_mtime = max(chain(file_times(path), top_level_file_times(path)))
     print_stdout(process)
     if max_mtime > last_mtime:
         last_mtime = max_mtime
