@@ -3,7 +3,7 @@ import os
 import sys
 import subprocess
 import time
-
+import psutil
 
 def file_filter(name):
     return (not name.startswith(".")) and (not name.endswith(".swp"))
@@ -44,6 +44,9 @@ while True:
     if max_mtime > last_mtime:
         last_mtime = max_mtime
         print 'Restarting process.'
+	    parent = psutil.Process(process.pid)
+	    for child in parent.children(recursive=True):  # or parent.children() for recursive=False
+            child.kill()
         process.kill()
         process = subprocess.Popen(command, shell=True)
     time.sleep(wait)
